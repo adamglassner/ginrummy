@@ -1,0 +1,14 @@
+GIN RUMMY - A Club Car Card Game  (v@VERSION@)
+==============================================
+
+Developed & Published by ... Ironite
+Game Design ................ Ironite
+Card Art & Illustration .... Ironite
+Music ...................... Ironite
+  "Starlight Swing", "Prairie Moon", "Boogie on the Rails"
+Sound Effects .............. Ironite
+Programming ................ Ironite
+Typefaces .................. Playfair Display & Lora
+                             (SIL Open Font License, see OFL.txt)
+
+Copyright (c) 2026 Ironite. All rights reserved.

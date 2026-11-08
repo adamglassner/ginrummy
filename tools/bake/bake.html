@@ -1,0 +1,114 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:"Lora";src:url(../../assets/fonts/Lora.ttf);font-weight:400 700}
+@font-face{font-family:"Lora";font-style:italic;src:url(../../assets/fonts/Lora-Italic.ttf);font-weight:400 700}
+@font-face{font-family:"Playfair Display";src:url(../../assets/fonts/PlayfairDisplay.ttf);font-weight:400 900}
+@font-face{font-family:"Playfair Display";font-style:italic;src:url(../../assets/fonts/PlayfairDisplay-Italic.ttf);font-weight:400 900}
+body{margin:0;background:#222}</style></head><body>
+<!-- Bakes the canvas art (art.js), the store art and the WebAudio music and
+     sound (audio.js) into the files the Go game embeds. Run: node tools/bake/bake.mjs -->
+<script src="art.js"></script>
+<script src="audio.js"></script>
+<script>
+window.bake = {};
+(async () => {
+  for (const f of ['40px "Lora"', 'italic 700 30px "Lora"', '700 40px "Playfair Display"', 'italic 700 40px "Playfair Display"']) await document.fonts.load(f);
+  const only = new URLSearchParams(location.search).get('only') || '';
+  /* ---------- images ---------- */
+  const img = {}, jpg = {};
+  for (const s of ['S', 'H', 'D', 'C']) for (let r = 2; r <= 14; r++) img['assets/cards/' + s + r] = Art.face({ s, r });
+  img['assets/cards/back'] = Art.back();
+  img['assets/cup'] = Art.cup(340);
+  img['assets/pad'] = Art.pad(380);
+  for (const n of [16, 32, 48, 64, 256]) img['assets/icon-' + n] = Art.icon(n);
+  img['icon-1024'] = Art.icon(1024);
+  if (only !== 'cards') {
+    jpg['assets/felt'] = Art.felt(1600, 1000);
+    const card = id => Art.face({ s: id[0], r: +id.slice(1) });
+    function fan(c, cx, by, cardW, ids, spread) {
+      const n = ids.length;
+      ids.forEach((id, i) => { const k = i - (n - 1) / 2; c.save(); c.translate(cx + k * cardW * .38, by); c.rotate(k * spread * Math.PI / 180); c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = cardW * .12; c.shadowOffsetY = cardW * .05; const ch = cardW * Art.CH / Art.CW; c.drawImage(card(id), -cardW / 2, -ch, cardW, ch); c.restore(); });
+    }
+    function title(c, x, y, size, txt) { c.textAlign = 'center'; c.font = `italic 800 ${size}px "Playfair Display"`; c.fillStyle = '#5a3a0e'; c.fillText(txt, x, y + size * .06); c.fillStyle = '#e8c35a'; c.fillText(txt, x, y); }
+    // the night prairie seen through the club-car window
+    function prairie(c, W, H, horizon) {
+      const g = c.createLinearGradient(0, 0, 0, horizon); g.addColorStop(0, '#0b0f26'); g.addColorStop(0.65, '#2a2450'); g.addColorStop(1, '#7a4a5a'); c.fillStyle = g; c.fillRect(0, 0, W, horizon);
+      let s = 11; const R = () => (s = (s * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < W * horizon / 3000; i++) { c.fillStyle = `rgba(255,250,230,${R() * 0.8})`; c.beginPath(); c.arc(R() * W, R() * horizon * 0.85, R() * 1.7, 0, 7); c.fill(); }
+      c.fillStyle = '#f6eccc'; c.beginPath(); c.arc(W * 0.8, horizon * 0.3, horizon * 0.09, 0, 7); c.fill();
+      c.fillStyle = 'rgba(246,236,204,.15)'; c.beginPath(); c.arc(W * 0.8, horizon * 0.3, horizon * 0.16, 0, 7); c.fill();
+      c.fillStyle = '#1a1424'; c.beginPath(); c.moveTo(0, horizon); for (let i = 0; i <= 40; i++) c.lineTo(W * i / 40, horizon - 30 - 40 * Math.abs(Math.sin(i * 0.45)) * (i % 7 < 3 ? 1.6 : 0.6)); c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fill();
+      c.fillStyle = '#0e0a14'; c.fillRect(0, horizon, W, H - horizon);
+      for (let x = 0; x < W; x += W / 14) { c.fillStyle = '#0e0a14'; c.fillRect(x, horizon - 70, 4, 70); }   // telegraph poles
+      c.strokeStyle = 'rgba(14,10,20,.9)'; c.lineWidth = 1.5; c.beginPath(); for (let x = 0; x <= W; x += W / 14) c.quadraticCurveTo(x - W / 28, horizon - 54, x, horizon - 64); c.stroke();
+    }
+    function windowFrame(c, x, y, w, h) {   // walnut panelling with a brass-trimmed window
+      c.save(); c.fillStyle = '#2e1a0e'; c.beginPath(); c.rect(0, 0, c.canvas.width, c.canvas.height); c.roundRect(x, y, w, h, 40); c.fill('evenodd'); c.restore();
+      c.strokeStyle = '#d9b45a'; c.lineWidth = 10; c.beginPath(); c.roundRect(x, y, w, h, 40); c.stroke();
+      c.strokeStyle = '#7a5a1e'; c.lineWidth = 3; c.beginPath(); c.roundRect(x - 9, y - 9, w + 18, h + 18, 48); c.stroke();
+      for (let xx = 0; xx < c.canvas.width; xx += 90) { c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(xx, 0, 3, y - 14); }
+    }
+    function table(c, W, H, y) {   // the green baize table edge with a brass rail
+      c.drawImage(Art.felt(800, 400), 0, 0, 800, 400, 0, y, W, H - y);
+      c.fillStyle = '#2a160a'; c.fillRect(0, y - 16, W, 16); c.fillStyle = '#d9b45a'; c.fillRect(0, y - 16, W, 4);
+      const v = c.createLinearGradient(0, y, 0, H); v.addColorStop(0, 'rgba(0,0,0,.4)'); v.addColorStop(1, 'rgba(0,0,0,.1)'); c.fillStyle = v; c.fillRect(0, y, W, H - y);
+    }
+    { // store cover, 800x1000
+      const W = 800, H = 1000, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+      prairie(c, W, 640, 560); windowFrame(c, 50, 60, 700, 560);
+      table(c, W, H, 660);
+      c.fillStyle = 'rgba(15,22,48,.92)'; c.strokeStyle = '#e8c35a'; c.lineWidth = 5; c.beginPath(); c.roundRect(110, 150, 580, 250, 20); c.fill(); c.stroke();
+      c.lineWidth = 1.5; c.beginPath(); c.roundRect(124, 164, 552, 222, 14); c.stroke();
+      Art.star(c, W / 2, 196, 18, '#f2d68e');
+      c.fillStyle = '#c9a24c'; c.font = '700 22px "Playfair Display"'; c.textAlign = 'center'; c.fillText('THE STARLIGHT LIMITED', W / 2, 238);
+      title(c, W / 2, 330, 104, 'Gin Rummy'); c.fillStyle = '#f2e6c8'; c.font = 'italic 700 30px "Lora"'; c.fillText('A Club Car Card Game', W / 2, 372);
+      c.drawImage(Art.cup(230), 18, 720, 230, 230); c.drawImage(Art.pad(250), 560, 730, 250, 250);
+      fan(c, W / 2, H * 0.99, 210, ['H7', 'H8', 'H9', 'S13', 'D13', 'C13'], 9);
+      jpg['store/cover'] = cv;
+    }
+    { // store hero, 2400x840
+      const W = 2400, H = 840, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+      prairie(c, W, 600, 520); windowFrame(c, 120, 50, 2160, 470);
+      table(c, W, H, 560);
+      const g = c.createLinearGradient(0, 0, W * .6, 0); g.addColorStop(0, 'rgba(10,8,20,.7)'); g.addColorStop(.7, 'rgba(10,8,20,.25)'); g.addColorStop(1, 'rgba(10,8,20,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+      c.drawImage(Art.cup(300), 330, 560, 300, 300); c.drawImage(Art.pad(300), 2060, 560, 300, 300);
+      fan(c, W * 0.66, H * 1.06, 270, ['C5', 'C6', 'C7', 'D12', 'H12', 'S12'], 8);
+      jpg['store/hero'] = cv;
+    }
+  }
+  bake.images = Object.fromEntries(Object.entries(img).map(([k, c]) => [k + '.png', c.toDataURL('image/png')]));
+  for (const [k, c] of Object.entries(jpg)) bake.images[k + '.jpg'] = c.toDataURL('image/jpeg', 0.9);
+  bake.images['store/icon.png'] = Art.icon(512).toDataURL('image/png');
+
+  /* ---------- audio, rendered offline ---------- */
+  const SR = 44100;
+  function wav(buf) {
+    const L = buf.getChannelData(0), Rr = buf.getChannelData(1);
+    let n = L.length; while (n > 1 && Math.abs(L[n - 1]) < 1e-4 && Math.abs(Rr[n - 1]) < 1e-4) n--;
+    const b = new DataView(new ArrayBuffer(44 + n * 4)), w = (o, s) => [...s].forEach((ch, i) => b.setUint8(o + i, ch.charCodeAt(0)));
+    w(0, 'RIFF'); b.setUint32(4, 36 + n * 4, true); w(8, 'WAVE'); w(12, 'fmt '); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 2, true);
+    b.setUint32(24, SR, true); b.setUint32(28, SR * 4, true); b.setUint16(32, 4, true); b.setUint16(34, 16, true); w(36, 'data'); b.setUint32(40, n * 4, true);
+    let peak = 0; for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(Rr[i]));
+    const k = peak > 0.95 ? 0.95 / peak : 1;
+    for (let i = 0; i < n; i++) for (const [c, d] of [[0, L], [1, Rr]]) b.setInt16(44 + i * 4 + c * 2, Math.max(-1, Math.min(1, d[i] * k)) * 32767, true);
+    let s = ''; const u = new Uint8Array(b.buffer); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+    return { b64: btoa(s), peak };
+  }
+  bake.audio = {}; bake.peaks = {};
+  if (only !== 'cards') {
+    for (const [name, f] of Object.entries(Sound.fx)) {
+      const oc = new OfflineAudioContext(2, SR * 4, SR); const out = oc.createGain(); out.gain.value = 1.8; out.connect(oc.destination);
+      f(oc, out);
+      const r = wav(await oc.startRendering()); bake.audio['sfx-' + name] = r.b64; bake.peaks['sfx-' + name] = r.peak;
+    }
+    bake.tuneNames = Sound.TUNES.map(t => t.name);
+    for (let i = 0; i < Sound.TUNES.length; i++) {
+      const len = Sound.buildQueue(Sound.TUNES[i]).len;
+      const oc = new OfflineAudioContext(2, Math.ceil(SR * len), SR); const out = oc.createGain(); out.gain.value = 0.55; out.connect(oc.destination);
+      Sound.renderTune(oc, out, Sound.TUNES[i]);
+      const buf = await oc.startRendering(); buf.getChannelData(0)[buf.length - 1] = buf.getChannelData(1)[buf.length - 1] = 0.001;
+      const r = wav(buf); bake.audio['tune-' + i] = r.b64; bake.peaks['tune-' + i] = r.peak;
+    }
+  }
+  document.title = 'ready';
+})().catch(e => { document.title = 'error: ' + e.message + ' ' + e.stack; });
+</script></body></html>
